@@ -69,6 +69,7 @@ public class Corp {
 	private Timestamp lastUpdateTime;
 	private Integer corpMajorcategoryId1;
 	private String keyword1;
+	private target1 target1=new target1();
 	//private static Long certificatePic=1000L;
 	//private static Long acertificatePic=-1L;
 	private Integer isUpdateCharter;

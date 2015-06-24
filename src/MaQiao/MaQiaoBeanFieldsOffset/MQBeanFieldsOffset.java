@@ -8,12 +8,12 @@ import MaQiao.Constants.Constants;
 import sun.misc.Unsafe;
 import static MaQiao.Constants.Constants.FieldTypeEnum;
 import static MaQiao.MaQiaoBeanFieldsOffset.Consts.booleanType;
+
 /**
  * Class对象的各属性 类型 偏移地址记录
  * @version 1.1
  * @since 1.7
  * @author Sunjian
- *
  */
 public final class MQBeanFieldsOffset {
 	private static final Unsafe UNSAFE = Constants.UNSAFE;
@@ -28,11 +28,11 @@ public final class MQBeanFieldsOffset {
 		get(obj.getClass());
 	}
 
-	public Bean get(final Object obj) {
+	public final Bean get(final Object obj) {
 		return get(obj.getClass());
 	}
 
-	public Bean get(final Class<?> classzz) {
+	public final Bean get(final Class<?> classzz) {
 		lock();
 		try {
 			int find;
@@ -53,14 +53,14 @@ public final class MQBeanFieldsOffset {
 	 * @param classzz Class< ? >
 	 * @return int
 	 */
-	private int indexOf(final Class<?> classzz) {
+	private final int indexOf(final Class<?> classzz) {
 		//if (beanList.get(i).classzz.equals(classzz)) return i;
 		for (int i = 0, identityHashCode = System.identityHashCode(classzz), len = beanList.size(); i < len; i++)
 			if (beanList.get(i).identityHashCode == identityHashCode) return i;
 		return -1;
 	}
 
-	private void add(final Class<?> classzz) {
+	private final void add(final Class<?> classzz) {
 		for (int i = 0, identityHashCode = System.identityHashCode(classzz); i < beanList.size(); i++)
 			if (beanList.get(i).classzz.equals(classzz) && beanList.get(i).identityHashCode != identityHashCode) beanList.remove(i--);
 		final Bean e = new Bean(classzz);
@@ -79,18 +79,25 @@ public final class MQBeanFieldsOffset {
 			final Field field = fields[i];
 			FieldsOffset f = new FieldsOffset();
 			//if(field.getName().equals("enumA"))
-				//System.out.println("--->enumA\t:"+field.isEnumConstant());
+			//System.out.println("--->enumA\t:"+field.isEnumConstant());
 			//System.out.println(field.getName()+"=\t:"+field.getType().getName()+"\tisEnumConstant()"+field.isEnumConstant());
 			f.fieldName = field.getName();
 			if (field.getType().isArray()) {/*判断是是数组*/
 				f.isArray = true;
 				final String typeName = field.getType().getName();
 				f.fTE = FieldTypeEnum.getByASMType2(typeName.substring(1, typeName.length()));
-				if (f.fTE == null) if (typeName.length() > 2) insert(typeName.substring(2, typeName.length() - 1));
+				if (f.fTE == null && typeName.length() > 2) {
+					if (!e.Complex) e.Complex = true;
+					insert(typeName.substring(2, typeName.length() - 1));
+				}
 			} else {
 				f.fTE = FieldTypeEnum.getByReflectFields(field.getType().getName());
-				if (f.fTE == null) insert(field.getType());
-			}/*判断是否是static属性以决定UNSAFE的调用方法得到偏移量*/
+				if (f.fTE == null) {
+					if (!e.Complex) e.Complex = true;
+					insert(field.getType());
+				}
+			}
+			/*判断是否是static属性以决定UNSAFE的调用方法得到偏移量*/
 			if ((field.getModifiers() & java.lang.reflect.Modifier.TRANSIENT) == java.lang.reflect.Modifier.TRANSIENT) f.isTransient = true;
 			if ((field.getModifiers() & java.lang.reflect.Modifier.STATIC) == java.lang.reflect.Modifier.STATIC) {
 				f.staticFieldObject = UNSAFE.staticFieldBase(field);
@@ -113,8 +120,7 @@ public final class MQBeanFieldsOffset {
 	 * 在检索Fields时，发现外部对象，则添加这个对象信息
 	 * @param classzz Class
 	 */
-	private void insert(final Class<?> classzz) {
-		//if (beanList.get(i).classzz.equals(classzz)) return;
+	private final void insert(final Class<?> classzz) {
 		for (int i = 0, identityHashCode = System.identityHashCode(classzz), len = beanList.size(); i < len; i++)
 			if (beanList.get(i).identityHashCode == identityHashCode) return;
 		add(classzz);
@@ -124,7 +130,7 @@ public final class MQBeanFieldsOffset {
 	 * 在检索Fields时，发现外部对象数组，则添加这个对象信息
 	 * @param classString String
 	 */
-	private void insert(String classString) {
+	private final void insert(String classString) {
 		if (classString == null) return;
 		if (classString.indexOf('/') > 0) classString = classString.replace('/', '.');
 		for (int i = 0, len = beanList.size(); i < len; i++)
@@ -137,7 +143,7 @@ public final class MQBeanFieldsOffset {
 	}
 
 	@Override
-	public String toString() {
+	public final String toString() {
 		return "MQBeanFieldsOffset [beanList=" + beanList + "]";
 	}
 
@@ -145,6 +151,10 @@ public final class MQBeanFieldsOffset {
 		transient int identityHashCode = 0;
 		transient Class<?> classzz = null;
 		transient String className = null;
+		/**
+		 * 复杂Class类
+		 */
+		transient boolean Complex = false;
 		transient FieldsOffset[] fieldsOffsets = new FieldsOffset[0];
 		transient FieldsOffset[] fieldsStaticOffsets = new FieldsOffset[0];
 
@@ -160,9 +170,11 @@ public final class MQBeanFieldsOffset {
 			return className;
 		}
 
+		public final boolean isComplex() {
+			return Complex;
+		}
 
 		public final FieldsOffset[] getFieldsOffsets() {
-			//System.out.println("aaa");
 			return fieldsOffsets;
 		}
 
@@ -181,28 +193,30 @@ public final class MQBeanFieldsOffset {
 		}
 
 		@Override
-		public String toString() {
-			System.out.println("----------------------------属性------------------------------");
+		public final String toString() {
+			System.out.println("----------------------------属性 [" + className + "]------------------------------");
 			System.out.println("偏移量\t是否数组\t属性类型\t\t属性名称");
 			for (int i = 0; i < fieldsOffsets.length; i++) {
 				System.out.println(fieldsOffsets[i].offSet + "\t" + fieldsOffsets[i].isArray + "\t\t" + fieldsOffsets[i].fTE + "\t\t\t" + fieldsOffsets[i].fieldName);
 				//if(fieldsOffsets[i].isStatic)System.out.println("----------------------------------------------------------");
 			}
-			System.out.println("----------------------------静态属性------------------------------");
-			System.out.println("偏移量\t是否数组\t属性类型\t\t属性名称");
-			for (int i = 0; i < fieldsStaticOffsets.length; i++) {
-				System.out.println(fieldsStaticOffsets[i].offSet + "\t" + fieldsStaticOffsets[i].isArray + "\t\t" + fieldsStaticOffsets[i].fTE + "\t\t\t" + fieldsStaticOffsets[i].fieldName);
-				//if(fieldsOffsets[i].isStatic)System.out.println("----------------------------------------------------------");
+			if (fieldsStaticOffsets.length > 0) {
+				System.out.println("----------------------------静态属性------------------------------");
+				System.out.println("偏移量\t是否数组\t属性类型\t\t属性名称");
+				for (int i = 0; i < fieldsStaticOffsets.length; i++) {
+					System.out.println(fieldsStaticOffsets[i].offSet + "\t" + fieldsStaticOffsets[i].isArray + "\t\t" + fieldsStaticOffsets[i].fTE + "\t\t\t" + fieldsStaticOffsets[i].fieldName);
+					//if(fieldsOffsets[i].isStatic)System.out.println("----------------------------------------------------------");
+				}
 			}
-			System.out.println("----------------------------属性结束------------------------------");
-			return "Bean [identityHashCode=" + identityHashCode + ", classzz=" + classzz + ", className=" + className + ", fieldsOffsets=" + Arrays.toString(fieldsOffsets) + ", fieldsStaticOffsets="
-					+ Arrays.toString(fieldsStaticOffsets) + "]";
+			System.out.println("---------------------------------------------------------------------------");
+			return "Bean [identityHashCode=" + identityHashCode + ", classzz=" + classzz + ", className=" + className + ", Complex=" + Complex + ", fieldsOffsets=" + Arrays.toString(fieldsOffsets)
+					+ ", fieldsStaticOffsets=" + Arrays.toString(fieldsStaticOffsets) + "]";
 		}
 	}
 
 	public final class FieldsOffset {
 		transient String fieldName = null;
-		transient Object staticFieldObject=null;
+		transient Object staticFieldObject = null;
 		transient boolean isArray = false;
 		transient boolean isTransient = false;
 		transient FieldTypeEnum fTE = null;
@@ -233,7 +247,7 @@ public final class MQBeanFieldsOffset {
 		}
 
 		@Override
-		public String toString() {
+		public final String toString() {
 			return "FieldsOffset [fieldName=" + fieldName + ", isArray=" + isArray + ", isTransient=" + isTransient + ", fTE=" + fTE + ", offSet=" + offSet + "]";
 		}
 

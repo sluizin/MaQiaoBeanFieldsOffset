@@ -6,7 +6,6 @@ public class target2  implements Serializable{
 	  private static final long serialVersionUID = -5182532647273106745L;
 	  private String c2cc="defff";
 	  private int a2aa=15;
-	  //private Corp corr;
 	  private Integer b2bb=new Integer(5);
 	  public target2(){
 		  
